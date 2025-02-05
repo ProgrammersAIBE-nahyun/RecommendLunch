@@ -1,5 +1,7 @@
 # AI 메뉴 추천 시스템
 
+![Flowchart](flowchart.svg)
+
 ## 📌 프로젝트 개요
 
 이 프로젝트는 사용자가 입력한 텍스트를 기반으로 AI 모델이 점심 메뉴를 추천하는 웹 애플리케이션입니다.  
@@ -33,7 +35,5 @@ Bootstrap을 활용하여 반응형 UI를 적용하였으며, Gemini-1.5-Flash �
 - Bootstrap을 활용한 **깔끔한 카드 UI** 적용.
 - **삭제 버튼**을 통해 개별 추천 결과를 제거할 수 있습니다.
 - **경고(alert) 박스**를 활용하여 AI의 답변을 강조.
-
-![Flowchart](flowchart.svg)
 
 ---
