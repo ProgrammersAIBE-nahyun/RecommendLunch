@@ -3,30 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>AI 메뉴 추천</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
   </head>
-  <body>
-    <header>
-      <button id="resetButton">저장된 데이터 리셋</button>
-    </header>
-    <form id="controller">
-      <label>
-        모델 :
-        <select name="modelOption">
-          <option value="1">gemini-1.5-flash</option>
-          <option value="2">deepseek-r1</option>
-        </select>
-      </label>
-      <textarea name="textData"></textarea>
-      <button>등록</button>
-    </form>
-    <div id="container"></div>
+  <body class="bg-light">
+    <div class="container mt-4">
+      <header class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">AI 메뉴 추천 시스템</h1>
+        <button id="resetButton" class="btn btn-danger">
+          저장된 데이터 리셋
+        </button>
+      </header>
+
+      <form id="controller" class="card p-3 shadow-sm">
+        <div class="mb-3">
+          <label class="form-label">모델 선택 :</label>
+          <select name="modelOption" class="form-select">
+            <option value="1">Gemini-1.5-Flash</option>
+            <option value="2">DeepSeek-R1</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">입력 :</label>
+          <textarea name="textData" class="form-control" rows="3"></textarea>
+        </div>
+        <button class="btn btn-primary w-100">등록</button>
+      </form>
+
+      <div id="container" class="mt-4 row"></div>
+    </div>
+
     <script>
       function _() {
         const container = document.querySelector("#container");
         const form = document.querySelector("#controller");
         const resetButton = document.querySelector("#resetButton");
-        resetButton.addEventListener("click", () => (data.length = 0));
+
+        resetButton.addEventListener("click", () => {
+          data.length = 0;
+          updateStorage(data);
+          updateContainer();
+        });
+
         const data = new Proxy([], {
           set(target, property, value) {
             target[property] = value;
@@ -35,50 +56,60 @@
             return true;
           },
         });
+
         function onMounted() {
-          data.push(...(JSON.parse(localStorage.getItem("myData")) ?? []));
+          const storedData = JSON.parse(localStorage.getItem("myData")) ?? [];
+          data.push(...storedData);
         }
         onMounted();
 
         function updateContainer() {
           container.innerHTML = "";
-          for (const d of data) {
-            const tmp = document.createElement("div");
-            tmp.textContent = d.text;
-            const deleteButton = document.createElement("button");
-            deleteButton.textContent = "삭제";
-            deleteButton.addEventListener("click", () => {
-              const fillterd = data.filter((value) => value.id !== d.id);
+          data.forEach((d) => {
+            const card = document.createElement("div");
+            card.className = "col-md-6 col-lg-4 mb-3";
+            card.innerHTML = `
+              <div class="card shadow-sm">
+                <div class="card-body">
+                  <p class="card-text">${d.text}</p>
+                  ${
+                    d.reply
+                      ? `<div class="alert alert-warning p-2">${d.reply}</div>`
+                      : ""
+                  }
+                  <button class="btn btn-danger btn-sm w-100 delete-button" data-id="${
+                    d.id
+                  }">삭제</button>
+                </div>
+              </div>`;
+            container.appendChild(card);
+          });
+          attachDeleteEventListeners();
+        }
+
+        function attachDeleteEventListeners() {
+          document.querySelectorAll(".delete-button").forEach((button) => {
+            button.addEventListener("click", (event) => {
+              const id = parseInt(event.target.getAttribute("data-id"));
+              const filtered = data.filter((value) => value.id !== id);
               data.length = 0;
-              data.push(...fillterd);
+              data.push(...filtered);
+              updateStorage(data);
+              updateContainer();
             });
-            // LLM 응답
-            if (d.reply) {
-              const box = document.createElement("div");
-              const reply = document.createElement("code");
-              box.appendChild(reply);
-              // CSS
-              box.style.padding = "12px";
-              box.style.margin = "4px";
-              box.style.backgroundColor = "beige";
-              box.style.border = "1px solid black";
-              reply.textContent = d.reply;
-              tmp.appendChild(box);
-            }
-            tmp.appendChild(deleteButton);
-            container.appendChild(tmp);
-          }
+          });
         }
 
         function updateStorage(target) {
           localStorage.setItem("myData", JSON.stringify(target));
         }
+
         async function handleForm(event) {
           event.preventDefault();
           const formData = new FormData(form);
-
           const text = formData.get("textData");
           let reply;
+
           switch (formData.get("modelOption")) {
             case "1":
               reply = `👬 Gemini : ${await makeReply(text)}`;
@@ -88,8 +119,7 @@
               break;
             default:
               alert("비정상적인 접근!");
-              throw new Error("알 수 없는 에러!");
-              break;
+              return;
           }
 
           const displayData = {
@@ -99,45 +129,34 @@
           };
           data.push(displayData);
         }
-        // 1차 gemini
-        async function makeReply(text) {
-          // https://aistudio.google.com/
 
+        async function makeReply(text) {
           const url = `https://working-brash-bellflower.glitch.me/1`;
           const response = await fetch(url, {
             method: "POST",
-            body: JSON.stringify({
-              text: `너는 20년 경력의 메뉴 추천 전문가야. {${text}}의 메시지를 바탕으로, 점심 메뉴를 추천해주고, 50자 이내에 평문으로 작성해줘. 결과는 한글로 작성해줘.`,
-            }),
-            headers: {
-              "Content-Type": "application/json",
-            },
+            body: JSON.stringify({ text }),
+            headers: { "Content-Type": "application/json" },
           });
           const json = await response.json();
           return json.reply;
         }
 
-        // 2차 deepseek
-        async function makeReply2(
-          content,
-          model = "deepseek-r1-distill-llama-70b"
-        ) {
+        async function makeReply2(content) {
           const url = "https://working-brash-bellflower.glitch.me/2";
           const response = await fetch(url, {
             method: "POST",
-            body: JSON.stringify({
-              text: `너는 20년 경력의 메뉴 추천 전문가야. {${content}}의 메시지를 바탕으로, 점심 메뉴를 추천해주고, 50자 이내에 평문으로 작성해줘. 결과는 한글로 작성해줘.`, // 단축을 위해서 각각의 api가 형태에 맞춰서
-            }),
-            headers: {
-              "Content-Type": "application/json",
-            },
+            body: JSON.stringify({ text: content }),
+            headers: { "Content-Type": "application/json" },
           });
           const json = await response.json();
           return json.reply;
         }
+
         form.addEventListener("submit", handleForm);
       }
       window.onload = _;
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>
