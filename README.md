@@ -1,5 +1,7 @@
 # AI 메뉴 추천 시스템
 
+## glitch는 임시로 막아두었습니다.
+
 ![Flowchart](flowchart.svg)
 
 ## 📌 프로젝트 개요
